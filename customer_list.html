@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Customer List</title>
+    <link rel="stylesheet" href="css/customer_list.css">
+</head>
+
+<body>
+    <h2>Customer List</h2>
+    <table id="customerTable">
+        <thead>
+            <tr>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Address</th>
+                <th>City</th>
+                <th>State</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Customer data will be display here -->
+        </tbody>
+    </table>
+    <button onclick="location.href='add_customer.html'">Add New Customer</button>
+
+    <script>
+        const token = localStorage.getItem('token');
+        fetch('https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=get_customer_list', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                if (response.status === 401) {
+                    throw new Error('Invalid Authorization');
+                }
+                if (response.status === 500) {
+                    throw new Error('Invalid Command');
+                }
+                throw new Error('Failed to fetch customer list');
+            })
+            .then(data => {
+                const customerTable = document.getElementById('customerTable');
+                const tbody = customerTable.getElementsByTagName('tbody')[0];
+                tbody.innerHTML = '';
+
+                data.forEach(customer => {
+                    const row = tbody.insertRow();
+                    row.insertCell(0).innerText = customer.first_name;
+                    row.insertCell(1).innerText = customer.last_name;
+                    row.insertCell(2).innerText = customer.address;
+                    row.insertCell(3).innerText = customer.city;
+                    row.insertCell(4).innerText = customer.state;
+                    row.insertCell(5).innerText = customer.email;
+                    row.insertCell(6).innerText = customer.phone;
+
+                    const actionsCell = row.insertCell(7);
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.innerText = 'Delete';
+                    deleteButton.onclick = function () {
+                        deleteCustomer(customer.uuid);
+                    };
+                    actionsCell.appendChild(deleteButton);
+
+                    const updateButton = document.createElement('button');
+                    updateButton.innerText = 'Update';
+                    updateButton.onclick = function () {
+                        window.location.href = `update_customer.html?uuid=${customer.uuid}`;
+                    };
+                    actionsCell.appendChild(updateButton);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to fetch customer list');
+            });
+
+        function deleteCustomer(uuid) {
+            fetch(`https://qa2.sunbasedata.com/sunbase/portal/api/assignment.jsp?cmd=delete&uuid=${uuid}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (response.status === 200) {
+                    alert('Successfully Deleted');
+                    window.location.reload();
+                } else if (response.status === 500) {
+                    throw new Error('UUID not found');
+                } else if (response.status === 400) {
+                    throw new Error('Body is Empty');
+                } else {
+                    throw new Error('Failed to delete customer');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to delete customer');
+            });
+        }
+    </script>
+</body>
+
+</html>
